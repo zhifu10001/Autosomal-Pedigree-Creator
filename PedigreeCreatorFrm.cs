@@ -33,8 +33,7 @@ namespace Pedigree_Creator
 
         private string sanatize(string file)
         {
-            file = file.Replace(" ", "_");
-            string new_file_name = Regex.Replace(file, "[^A-Za-z_]", "");
+            string new_file_name = Regex.Replace(file, "[^A-Za-z]", "");
             return new_file_name;
         }
 
@@ -123,7 +122,8 @@ namespace Pedigree_Creator
                     File.Copy(file, "data\\" + sanatize(Path.GetFileNameWithoutExtension(file)));
                
             }
-            
+
+            backgroundWorker1.ReportProgress(10, "10% Complete.");
 
             // initial pass
             ibdcsfast.IBDCSFast.doIBDCSFast();
@@ -133,11 +133,12 @@ namespace Pedigree_Creator
                 if (File.Exists("ibd\\" + sanatize(Path.GetFileNameWithoutExtension(file))))
                     File.Delete("ibd\\" + sanatize(Path.GetFileNameWithoutExtension(file)));
             }
+           
             copyFilesFromFolder("ibd", "data");
             renkits.RenKits.doRenKits();
             deleteFilesFromFolder("ibd");
 
-
+            backgroundWorker1.ReportProgress(15, "15% Complete.");
             // subsequent pass
 
             int count = 0;
@@ -155,11 +156,14 @@ namespace Pedigree_Creator
                     break;
                 prev_count = Directory.GetFiles("ibd").Length;
             }
-
+            backgroundWorker1.ReportProgress(75, "75% Complete.");
             copyFilesFromFolder("data", "ibd");
             deleteFilesFromFolder("data");            
             
             preparelist.PrepareList.doPrepareList();
+
+            backgroundWorker1.ReportProgress(90, "90% Complete.");
+
             genxml.GenXML.doGenXML();
 
             xml2gv.Xml2GraphViz.doXml2GraphViz();
@@ -178,6 +182,10 @@ namespace Pedigree_Creator
                 File.Move("atree.xml", "tmp\\atree.xml");
             if (File.Exists("tree.gv")) 
                 File.Move("tree.gv", "tmp\\tree.gv");
+            if (File.Exists("common_ancestors.txt"))
+                File.Move("common_ancestors.txt", "tmp\\common_ancestors.txt");
+            
+            backgroundWorker1.ReportProgress(100, "100% Complete.");
             Process.Start("pedigree.png");
         }
 
@@ -207,8 +215,12 @@ namespace Pedigree_Creator
 
         private void backgroundWorker1_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
+            if (listBox1.Items.Count > 1000)
+                listBox1.Items.Clear();
             listBox1.Items.Add(e.UserState.ToString());
             listBox1.SelectedIndex = listBox1.Items.Count - 1;
+            if (e.ProgressPercentage != -1)
+                progressBar1.Value = e.ProgressPercentage;
         }
 
         private void PedigreeCreatorFrm_FormClosing(object sender, FormClosingEventArgs e)
@@ -229,7 +241,7 @@ namespace Pedigree_Creator
 
         private void button2_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("A tool to create pedigrees from a set of autosomal files.\r\n\r\nDeveloper: Felix Chandrakumar <i@fc.id.au>", "Autosomal Pedigree Creator", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("A tool to create pedigrees from a set of autosomal files.\r\n\r\nDeveloper: Felix Chandrakumar <i@fc.id.au>\r\nWebsite: y-str.org", "Autosomal Pedigree Creator", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -239,7 +251,7 @@ namespace Pedigree_Creator
 
         private void button4_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("1. Rename all kits to have some meaning filenames.\r\n2. Place all kits into one folder.\r\n3. Browse and select the folder.\r\n4. The final output will be an image file which will automatically open.\r\n\r\nTo get more indepth details, please visit website.", "Quick Help");
+            MessageBox.Show("1. Rename all kits to have some meaning filenames. No numbers please.\r\n2. Place all kits into one folder.\r\n3. Browse and select the folder.\r\n4. The final output will be an image file which will automatically open.\r\n\r\nTo get more indepth details, please visit website.", "Quick Help");
         }
     }
 }

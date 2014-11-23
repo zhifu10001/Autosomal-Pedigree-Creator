@@ -73,7 +73,7 @@ namespace xml2gv
             sb1.Append("\"COMMON_ANCESTOR_ID\",\"DESCENDENTS\"\r\n");
             foreach (string name in namesdb.Keys)
                 sb1.Append("\"" + name + "\",\"" + namesdb[name] + "\"\r\n");
-            File.WriteAllText("tmp\\common_ancestors.txt ", sb1.ToString());
+            File.WriteAllText("common_ancestors.txt ", sb1.ToString());
             
             Program.addLog("xml -> gv done.");
         }
