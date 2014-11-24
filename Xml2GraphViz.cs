@@ -18,10 +18,10 @@ namespace xml2gv
         static Dictionary<string, string> namesdb = new Dictionary<string, string>();
         static Random r = new Random((int)DateTime.Now.Ticks & 0x0000FFFF);
         static XmlDocument doc = null;
-
-        public static void doXml2GraphViz()
+        static bool dump_all = false;
+        public static void doXml2GraphViz(bool m_dump_all)
         {
-            
+            dump_all = m_dump_all;
             if(!File.Exists("atree.xml"))
             {
                 Program.addLog("atree.xml does not exist!");
@@ -39,14 +39,19 @@ namespace xml2gv
             int total_ca = kvp.Keys.Count;
             int prev_total_ca = -1;
 
-            while (true)
+            if (!dump_all)
             {
-                removeTerminalCAs();
-                total_ca = kvp.Keys.Count;
-                if (total_ca == prev_total_ca)
-                    break;
-                prev_total_ca = total_ca;
+                while (true)
+                {
+                    removeTerminalCAs();
+                    total_ca = kvp.Keys.Count;
+                    if (total_ca == prev_total_ca)
+                        break;
+                    prev_total_ca = total_ca;
+                }
             }
+
+
             string key1 = null;
             string value1 = null;
             foreach(string key in kvp.Keys)
@@ -61,7 +66,7 @@ namespace xml2gv
                         value1 = value.Substring(3);
                     else
                         value1 = value;
-                    sb.Append(key1 + " -> " + value1 + ";\r\n");
+                    sb.Append("\""+key1 + "\" -> \"" + value1 + "\";\r\n");
                 }
             }
 
@@ -73,7 +78,7 @@ namespace xml2gv
             sb1.Append("\"COMMON_ANCESTOR_ID\",\"DESCENDENTS\"\r\n");
             foreach (string name in namesdb.Keys)
                 sb1.Append("\"" + name + "\",\"" + namesdb[name] + "\"\r\n");
-            File.WriteAllText("common_ancestors.txt ", sb1.ToString());
+            File.WriteAllText("common_ancestors.csv ", sb1.ToString());
             
             Program.addLog("xml -> gv done.");
         }
@@ -159,9 +164,15 @@ namespace xml2gv
                         children.Add(n.Attributes["NAME"].Value);
                     }
 
-
-                    if (isParentChildLine(node))
+                    if (!dump_all)
+                    {
+                        if (isParentChildLine(node))
+                            kvp.Add(p, children);
+                    }
+                    else
+                    {
                         kvp.Add(p, children);
+                    }
             }
         }
 

@@ -16,6 +16,8 @@ namespace Pedigree_Creator
 {
     public partial class PedigreeCreatorFrm : Form
     {
+        bool dump_all = false;
+        string dir_path = null;
         public PedigreeCreatorFrm()
         {
             InitializeComponent();
@@ -23,6 +25,7 @@ namespace Pedigree_Creator
 
         private void PedigreeCreatorFrm_Load(object sender, EventArgs e)
         {
+            this.Text = "Autosomal Pedigree Creator v" + Application.ProductVersion;
             if(!Directory.Exists("data"))
                 Directory.CreateDirectory("data");
             if (!Directory.Exists("ibd"))
@@ -33,7 +36,7 @@ namespace Pedigree_Creator
 
         private string sanatize(string file)
         {
-            string new_file_name = Regex.Replace(file, "[^A-Za-z]", "");
+            string new_file_name = Regex.Replace(file, "[^A-Za-z0-9]", "");
             return new_file_name;
         }
 
@@ -81,7 +84,7 @@ namespace Pedigree_Creator
 
         private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
         {
-            
+            backgroundWorker1.ReportProgress(0, "0% Initializing ...");
             deleteFilesFromFolder("data");
             deleteFilesFromFolder("ibd");
             deleteFilesFromFolder("tmp");   
@@ -158,15 +161,22 @@ namespace Pedigree_Creator
             }
             backgroundWorker1.ReportProgress(75, "75% Complete.");
             copyFilesFromFolder("data", "ibd");
-            deleteFilesFromFolder("data");            
-            
+            deleteFilesFromFolder("data");
+
+            // cleanup own file
+            foreach (string file in files)
+            {
+                if (File.Exists("ibd\\" + sanatize(Path.GetFileNameWithoutExtension(file))))
+                    File.Delete("ibd\\" + sanatize(Path.GetFileNameWithoutExtension(file)));
+            }
+
             preparelist.PrepareList.doPrepareList();
 
             backgroundWorker1.ReportProgress(90, "90% Complete.");
 
             genxml.GenXML.doGenXML();
 
-            xml2gv.Xml2GraphViz.doXml2GraphViz();
+            xml2gv.Xml2GraphViz.doXml2GraphViz(dump_all);
 
             Process p = new Process();
             ProcessStartInfo psinfo=new ProcessStartInfo("bin\\dot.exe","-Tpng tree.gv -o pedigree.png");
@@ -182,8 +192,8 @@ namespace Pedigree_Creator
                 File.Move("atree.xml", "tmp\\atree.xml");
             if (File.Exists("tree.gv")) 
                 File.Move("tree.gv", "tmp\\tree.gv");
-            if (File.Exists("common_ancestors.txt"))
-                File.Move("common_ancestors.txt", "tmp\\common_ancestors.txt");
+            if (File.Exists("common_ancestors.csv"))
+                File.Move("common_ancestors.csv", "tmp\\common_ancestors.csv");
             
             backgroundWorker1.ReportProgress(100, "100% Complete.");
             Process.Start("pedigree.png");
@@ -234,14 +244,14 @@ namespace Pedigree_Creator
             FolderBrowserDialog dlg = new FolderBrowserDialog();
             if (dlg.ShowDialog(this) == DialogResult.OK)
             {
-                button1.Enabled = false;
-                backgroundWorker1.RunWorkerAsync(dlg.SelectedPath);                
+                button5.Enabled = true;
+                dir_path = dlg.SelectedPath;
             }
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("A tool to create pedigrees from a set of autosomal files.\r\n\r\nDeveloper: Felix Chandrakumar <i@fc.id.au>\r\nWebsite: y-str.org", "Autosomal Pedigree Creator", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("Version "+Application.ProductVersion+"\r\n\r\nA tool to create pedigrees from a set of autosomal files.\r\n\r\nDeveloper: Felix Chandrakumar <i@fc.id.au>\r\nWebsite: y-str.org", "Autosomal Pedigree Creator", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -252,6 +262,30 @@ namespace Pedigree_Creator
         private void button4_Click(object sender, EventArgs e)
         {
             MessageBox.Show("1. Rename all kits to have some meaning filenames. No numbers please.\r\n2. Place all kits into one folder.\r\n3. Browse and select the folder.\r\n4. The final output will be an image file which will automatically open.\r\n\r\nTo get more indepth details, please visit website.", "Quick Help");
+        }
+
+        private void checkBox1_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (MessageBox.Show("Dump all tries to connect every single matching segment which may make the pedigree clumsy. Use this option only of the set if the autosomal files are totally unrelated to each other. Are you sure you want to dump all?", "Question?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                if (!checkBox1.Checked)
+                    checkBox1.Checked = true;
+            }
+            else
+            {
+                if (checkBox1.Checked)
+                    checkBox1.Checked = false;
+            }
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("The process of comparing several autosomal files to draw a tree can range from a few minutes to several hours or even days depending on the number of autosomal files. Click 'Yes' to proceed. Otherwise, click 'No'","Please Read ...",MessageBoxButtons.YesNo,MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                button1.Enabled = false;
+                dump_all = checkBox1.Checked;
+                backgroundWorker1.RunWorkerAsync(dir_path);
+            }
         }
     }
 }

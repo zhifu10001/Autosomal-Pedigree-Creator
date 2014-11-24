@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Windows.Forms;
 
 namespace preparelist
 {
@@ -49,14 +50,17 @@ namespace preparelist
 
             foreach (var key in list)
             {
-                //Program.addLog(key);
                 foreach (string s in dict[key])
                 {
+                    Program.addLog(key.ToString()+" => "+s);
                     segments_str = getSegments(ibd_dir + "\\" + s);
                     if (segments_str != "")
                         sb.Append(getName(s) + "," + s + "," + segments_str + "\r\n");
                     else
-                        File.Delete(s);
+                    {
+                        if(File.Exists(s))
+                            File.Delete(s);
+                    }
                 }
             }
             File.WriteAllText("atree.txt",sb.ToString());
@@ -81,7 +85,15 @@ namespace preparelist
                 if (l.Trim() == "" ||l.Trim().StartsWith("#")||l.Trim().ToLower().StartsWith("rsid"))
                     continue;
                 data = l.Replace("\"", "").Replace("\t", ",").Split(new char[] { ',' });
-                chr = int.Parse(data[1]);
+                try
+                {
+                    chr = int.Parse(data[1]);
+                }
+                catch (Exception)
+                {
+                    continue;
+                }                
+                
                 pos = int.Parse(data[2]);
                 snp_count++;
 
